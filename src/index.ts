@@ -1,9 +1,10 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import swaggerUi from 'swagger-ui-express';
-import swaggerJsdoc from 'swagger-jsdoc';
-import auditCatatanRoute from './routes/audit-catatan-route.js';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import swaggerUi from "swagger-ui-express";
+import swaggerJsdoc from "swagger-jsdoc";
+import router from "./routes/index.js";
+import { logger } from "./utils/logger.js";
 
 dotenv.config();
 
@@ -14,38 +15,36 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Konfigurasi Swagger
+// Swagger configuration
 const swaggerOptions = {
   definition: {
-    openapi: '3.0.0',
+    openapi: "3.0.0",
     info: {
-      title: 'CatatDigital API',
-      version: '1.0.0',
-      description: 'API Documentation for CatatDigital Backend',
+      title: "Catat Digital API",
+      version: "1.0.0",
+      description: "API Documentation for Catat Digital Backend",
     },
     servers: [
       {
         url: `http://localhost:${port}`,
-        description: 'Development server',
+        description: "Development server",
       },
     ],
   },
-  // Path ke file yang berisi komentar JSDoc Swagger
-  apis: ['./src/routes/*.ts'], 
+  apis: ["./src/routes/**/*.ts"],
 };
-
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// Rute API
-app.use('/api/v1/audit-catatan', auditCatatanRoute);
+// Use the master router for all routes
+app.use(router);
 
 // Root endpoint
-app.get('/', (req, res) => {
-  res.send('CatatDigital API is running. Check /api-docs for documentation.');
+app.get("/", (req, res) => {
+  res.send("Catat Digital API is running. Check /api-docs for documentation.");
 });
 
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-  console.log(`Swagger docs available at http://localhost:${port}/api-docs`);
+  logger.info(`Server is running on port ${port}`);
+  logger.info(`Swagger docs available at http://localhost:${port}/api-docs`);
 });

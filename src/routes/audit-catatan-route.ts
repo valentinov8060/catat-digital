@@ -1,19 +1,16 @@
-import { Router } from 'express';
-import multer from 'multer';
-import { auditCatatanController } from '../controllers/audit-catatan-controller.js';
+import { Router } from "express";
+import { uploadSingleFile } from "../middleware/multer-middleware.js";
+import { validatePostAuditCatatanRequest } from "../validations/audit-catatan-validation.js";
+import { postAuditCatatanController } from "../controllers/audit-catatan-controller.js";
 
 const router: Router = Router();
-
-// Konfigurasi multer untuk menyimpannya di memory buffer (karena kita akan merubah ke base64)
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
 
 /**
  * @swagger
  * /api/v1/audit-catatan:
  *   post:
- *     summary: Audit catatan keuangan dari gambar
- *     description: Mengunggah gambar nota atau buku kas untuk diaudit oleh AI dan mengembalikan data terstruktur beserta hasil audit.
+ *     summary: Audit financial records from images or files to google sheets
+ *     description: Endpoint for auditing financial records from images or files (like receipts, cash books, etc.) using Gemini 2.0 Flash and recording results in Google Sheets.
  *     tags:
  *       - Audit
  *     requestBody:
@@ -23,13 +20,13 @@ const upload = multer({ storage });
  *           schema:
  *             type: object
  *             properties:
- *               image:
+ *               financialRecordFile:
  *                 type: string
  *                 format: binary
- *                 description: File gambar catatan keuangan (nota, buku kas, dll)
+ *                 description: The image or file containing the financial record to be audited.
  *     responses:
  *       200:
- *         description: Berhasil mengaudit gambar
+ *         description: Successfully audited the financial record image
  *         content:
  *           application/json:
  *             schema:
@@ -37,36 +34,54 @@ const upload = multer({ storage });
  *               properties:
  *                 success:
  *                   type: boolean
+ *                   example: true
  *                 data:
  *                   type: object
  *                   properties:
- *                     transaksi:
+ *                     is_financial_record:
+ *                       type: boolean
+ *                       example: true
+ *                     transactions:
  *                       type: array
  *                       items:
  *                         type: object
  *                         properties:
- *                           tanggal:
+ *                           date:
  *                             type: string
- *                           deskripsi:
+ *                             format: date
+ *                             example: "2022-09-01"
+ *                           description:
  *                             type: string
- *                           jumlah:
+ *                             example: "Cs. Mb. Ageng 7.2kg"
+ *                           amount:
  *                             type: number
- *                           tipe:
+ *                             example: 28800
+ *                           type:
  *                             type: string
+ *                             enum: [income, expense]
+ *                             example: "income"
  *                     audit:
  *                       type: object
  *                       properties:
- *                         total_kalkulasi:
+ *                         total_calculated:
  *                           type: number
- *                         selisih_terdeteksi:
+ *                           example: 1090600
+ *                         detected_discrepancy:
  *                           type: number
- *                         catatan:
+ *                           example: 0
+ *                         notes:
  *                           type: string
+ *                           example: "The total income (1,090,600) and total expenses (401,900) match the totals written on the document. No calculation errors detected."
  *       400:
- *         description: Permintaan tidak valid (misal tidak ada file)
+ *         description: Invalid file upload (no file, wrong type, etc.)
  *       500:
- *         description: Kesalahan pada server
+ *         description: Internal server error during audit processing
  */
-router.post('/', upload.single('image'), auditCatatanController);
+router.post(
+  "/",
+  uploadSingleFile("financialRecordFile"),
+  validatePostAuditCatatanRequest,
+  postAuditCatatanController,
+);
 
 export default router;
