@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { uploadSingleFile } from "../middleware/multer-middleware.js";
+import { postAuditCatatanMulter } from "../middleware/multer-middleware.js";
 import { validatePostAuditCatatanRequest } from "../validations/audit-catatan-validation.js";
 import { postAuditCatatanController } from "../controllers/audit-catatan-controller.js";
 
@@ -79,7 +79,7 @@ const router: Router = Router();
  */
 router.post(
   "/",
-  uploadSingleFile("financialRecordFile"),
+  postAuditCatatanMulter("financialRecordFile"),
   validatePostAuditCatatanRequest,
   postAuditCatatanController,
 );

@@ -1,10 +1,33 @@
 import { GoogleGenAI } from "@google/genai";
 import { ResponseError } from "../error/response-error.js";
 import { logger } from "../utils/logger.js";
+import { generateExcelFinanceAuditBufferService } from "../services/excel-export-service.js";
+
+// Data dummy for testing without calling the AI API. This should be removed or replaced with proper mocks in unit tests.
+import auditDummyDataJson from "../../finance-report-dummy.json" with { type: "json" };
+
+interface Transaction {
+  date: string;
+  description: string;
+  amount: number;
+  type: "income" | "expense";
+}
+
+interface AuditData {
+  is_financial_record: boolean;
+  transactions: Transaction[];
+  audit: {
+    total_calculated: number;
+    detected_discrepancy: number;
+    notes: string;
+  };
+}
+
+const auditDummyData = auditDummyDataJson.data as AuditData;
 
 export const postAuditCatatanService = async (
   financialRecordsFile: Express.Multer.File,
-): Promise<any> => {
+): Promise<{ excelBuffer: Buffer }> => {
   // Audit preparation using AI
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -130,5 +153,8 @@ export const postAuditCatatanService = async (
     );
   }
 
-  return auditResult;
+  // const parsedData = JSON.parse(JSON.stringify(auditDummyData));
+  const excelBuffer = await generateExcelFinanceAuditBufferService(auditResult);
+
+  return { excelBuffer };
 };

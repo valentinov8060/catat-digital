@@ -2,8 +2,8 @@ import { RequestHandler } from "express";
 import multer from "multer";
 
 const storage = multer.memoryStorage();
-const upload = multer({ storage });
 
-export const uploadSingleFile = (fieldName: string): RequestHandler => {
+export const postAuditCatatanMulter = (fieldName: string): RequestHandler => {
+  const upload = multer({ storage, limits: { fileSize: 1024 * 1024 * 10 } });
   return upload.single(fieldName);
 };

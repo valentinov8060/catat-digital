@@ -11,7 +11,16 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors());
+app.disable("x-powered-by");
+app.set("trust proxy", false);
+
+const options = {
+  origin: "http://localhost:3000",
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  allowedHeaders: "Content-Type, Authorization, X-Requested-With",
+  credentials: true,
+};
+app.use(cors(options));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -38,11 +47,6 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Use the master router for all routes
 app.use(router);
-
-// Root endpoint
-app.get("/", (req, res) => {
-  res.send("Catat Digital API is running. Check /api-docs for documentation.");
-});
 
 app.listen(port, () => {
   logger.info(`Server is running on port ${port}`);

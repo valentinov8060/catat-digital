@@ -11,20 +11,30 @@ export const postAuditCatatanController = async (
     const financialRecordsFile = req.file!;
 
     logger.info(
-      `Processing audit request for file: ${financialRecordsFile.originalname} (${financialRecordsFile.mimetype})`,
+      `Processing post audit catatan request: ${financialRecordsFile.originalname} (${financialRecordsFile.mimetype})`,
     );
 
-    const result = await postAuditCatatanService(financialRecordsFile);
+    const { excelBuffer } = await postAuditCatatanService(financialRecordsFile);
 
-    res.status(200).json({
-      success: true,
-      data: result,
-    });
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=Catat_Digital.xlsx`,
+    );
+    res.end(excelBuffer);
+    return;
   } catch (error: any) {
     logger.error(
       "There was an error in the postAuditCatatanController:",
       error,
     );
+
+    if (res.headersSent) {
+      return;
+    }
 
     if (error instanceof ResponseError) {
       res.status(error.statusCode).json({
