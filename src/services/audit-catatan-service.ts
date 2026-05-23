@@ -1,76 +1,134 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI } from "@google/genai";
+import { ResponseError } from "../error/response-error.js";
+import { logger } from "../utils/logger.js";
 
-const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
-export const auditCatatan = async (imageBase64: string, mimeType: string): Promise<any> => {
-  const model = 'gemini-2.0-flash';
-  
-  const systemInstruction = `Kamu adalah asisten ahli keuangan untuk UMKM. Tugasmu adalah mengaudit catatan keuangan (seperti nota atau buku kas) dari gambar yang diberikan.
-Kembalikan respon hanya dalam bentuk JSON object murni, tanpa markdown code blocks (\`\`\`json) atau teks pengantar lainnya.
-
-Format JSON yang diharapkan:
-{
-  "transaksi": [
-    {
-      "tanggal": "YYYY-MM-DD",
-      "deskripsi": "Deskripsi transaksi",
-      "jumlah": 100000,
-      "tipe": "pemasukan/pengeluaran"
-    }
-  ],
-  "audit": {
-    "total_kalkulasi": 100000,
-    "selisih_terdeteksi": 0,
-    "catatan": "Catatan hasil audit jika ada selisih salah hitung atau tidak"
+export const postAuditCatatanService = async (
+  financialRecordsFile: Express.Multer.File,
+): Promise<any> => {
+  // Audit preparation using AI
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    logger.error(
+      "DANGER: GEMINI_API_KEY is not detected in environment variables",
+    );
+    throw new ResponseError(
+      500,
+      "AI service is not configured properly. Please contact the administrator.",
+    );
   }
-}`;
 
-  try {
-    const response = await genai.models.generateContent({
-      model: model,
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              inlineData: {
-                data: imageBase64,
-                mimeType: mimeType
-              }
+  const ai = new GoogleGenAI({ apiKey: apiKey });
+
+  const model = "gemma-4-26b-a4b-it";
+
+  const imageBase64 = financialRecordsFile.buffer.toString("base64");
+  const mimeType = financialRecordsFile.mimetype;
+
+  const systemInstruction = `You are an expert financial auditor for MSMEs.
+      Your task is to audit financial documents (such as receipts, invoices, or cash books) from the provided image.
+
+      CRITICAL RULES:
+      1. Validate if the uploaded image is actually a financial record or receipt. Set "is_financial_record" to true or false accordingly.
+      2. Carefully cross-check and recalculate all numbers, prices, and totals shown in the document.
+      3. Identify any calculation discrepancies, mismatched numbers, or recording errors, and explain them in detail within the "audit.notes" field.
+    `;
+
+  const jsonSchema = {
+    type: "OBJECT",
+    properties: {
+      is_financial_record: {
+        type: "BOOLEAN",
+        description:
+          "True if the image is a receipt, invoice, ledger, or any financial record. False otherwise.",
+      },
+      transactions: {
+        type: "ARRAY",
+        description:
+          "List of extracted transaction items if is_financial_record is true. Empty array if false.",
+        items: {
+          type: "OBJECT",
+          properties: {
+            date: {
+              type: "STRING",
+              description:
+                "Format: YYYY-MM-DD. Fallback to current year if only month/date is visible.",
             },
-            {
-              text: 'Tolong audit catatan keuangan dari gambar ini.'
-            }
-          ]
-        }
-      ],
-      config: {
-        systemInstruction: systemInstruction,
-        responseMimeType: "application/json"
-      }
-    });
+            description: {
+              type: "STRING",
+              description: "Item name, service description, or purpose.",
+            },
+            amount: {
+              type: "NUMBER",
+              description: "The unit price or line total amount.",
+            },
+            type: { type: "STRING", enum: ["income", "expense"] },
+          },
+          required: ["date", "description", "amount", "type"],
+        },
+      },
+      audit: {
+        type: "OBJECT",
+        description: "Audit summary and calculation verification.",
+        properties: {
+          total_calculated: {
+            type: "NUMBER",
+            description:
+              "The sum of all items calculated manually by you (the AI).",
+          },
+          detected_discrepancy: {
+            type: "NUMBER",
+            description:
+              "The difference between the written total on the receipt and your manual calculation. 0 if perfectly balanced.",
+          },
+          notes: {
+            type: "STRING",
+            description:
+              "Detailed explanation about calculation errors, missing data, or confirmation that the math is correct.",
+          },
+        },
+        required: ["total_calculated", "detected_discrepancy", "notes"],
+      },
+    },
+    required: ["is_financial_record", "transactions", "audit"],
+  };
 
-    if (!response.text) {
-      throw new Error("No response from Gemini");
-    }
+  // Start audit process with the AI model
+  const response = await ai.models.generateContent({
+    model: model,
+    contents: [
+      {
+        inlineData: {
+          data: imageBase64,
+          mimeType: mimeType,
+        },
+      },
+      "Please analyze this image, verify if it is a financial document, and audit the transactions.",
+    ],
+    config: {
+      systemInstruction: systemInstruction,
+      responseMimeType: "application/json",
+      responseSchema: jsonSchema,
+    },
+  });
 
-    let jsonStr = response.text;
-    // Bersihkan code block markdown jika ada
-    if (jsonStr.startsWith("```json")) {
-      jsonStr = jsonStr.substring(7);
-      if (jsonStr.endsWith("```")) {
-        jsonStr = jsonStr.substring(0, jsonStr.length - 3);
-      }
-    } else if (jsonStr.startsWith("```")) {
-        jsonStr = jsonStr.substring(3);
-        if (jsonStr.endsWith("```")) {
-          jsonStr = jsonStr.substring(0, jsonStr.length - 3);
-        }
-    }
-
-    return JSON.parse(jsonStr.trim());
-  } catch (error) {
-    console.error("Error calling Gemini API:", error);
-    throw error;
+  if (!response.text) {
+    throw new ResponseError(
+      500,
+      "AI response is empty. Failed to audit the financial record.",
+    );
   }
+
+  const auditResult = JSON.parse(response.text.trim());
+
+  if (!auditResult.is_financial_record) {
+    logger.warn(
+      `Audit rejected: File ${financialRecordsFile.originalname} is not a valid financial document.`,
+    );
+    throw new ResponseError(
+      400,
+      "The uploaded file does not appear to be a valid financial record. Please upload a clear image of a receipt, invoice, or ledger.",
+    );
+  }
+
+  return auditResult;
 };

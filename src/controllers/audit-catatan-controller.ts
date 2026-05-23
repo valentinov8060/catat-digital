@@ -1,29 +1,42 @@
-import { Request, Response } from 'express';
-import { auditCatatan } from '../services/audit-catatan-service.js';
+import { Request, Response } from "express";
+import { postAuditCatatanService } from "../services/audit-catatan-service.js";
+import { logger } from "../utils/logger.js";
+import { ResponseError } from "../error/response-error.js";
 
-export const auditCatatanController = async (req: Request, res: Response): Promise<void> => {
+export const postAuditCatatanController = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
   try {
-    if (!req.file) {
-      res.status(400).json({ error: 'Tidak ada gambar yang diunggah' });
-      return;
-    }
+    const financialRecordsFile = req.file!;
 
-    const fileBuffer = req.file.buffer;
-    const mimeType = req.file.mimetype;
-    const base64Image = fileBuffer.toString('base64');
+    logger.info(
+      `Processing audit request for file: ${financialRecordsFile.originalname} (${financialRecordsFile.mimetype})`,
+    );
 
-    const auditResult = await auditCatatan(base64Image, mimeType);
+    const result = await postAuditCatatanService(financialRecordsFile);
 
     res.status(200).json({
       success: true,
-      data: auditResult
+      data: result,
     });
   } catch (error: any) {
-    console.error("Audit Controller Error:", error);
+    logger.error(
+      "There was an error in the postAuditCatatanController:",
+      error,
+    );
+
+    if (error instanceof ResponseError) {
+      res.status(error.statusCode).json({
+        success: false,
+        error: error.message,
+      });
+      return;
+    }
     res.status(500).json({
       success: false,
-      error: 'Terjadi kesalahan saat memproses gambar',
-      details: error.message
+      error: "Internal server error",
+      details: error.message,
     });
   }
 };
