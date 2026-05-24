@@ -1,3 +1,4 @@
+import path from "node:path";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -14,8 +15,9 @@ const port = process.env.PORT || 3000;
 app.disable("x-powered-by");
 app.set("trust proxy", false);
 
+// CORS configuration
 const options = {
-  origin: "http://localhost:3000",
+  origin: process.env.URL || "http://localhost:3000",
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   allowedHeaders: "Content-Type, Authorization, X-Requested-With",
   credentials: true,
@@ -23,6 +25,13 @@ const options = {
 app.use(cors(options));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// View Engine Setup
+app.set("view engine", "ejs");
+app.set("views", path.join(process.cwd(), "views"));
+
+// Static Files Setup
+app.use(express.static(path.join(process.cwd(), "public")));
 
 // Swagger configuration
 const swaggerOptions = {

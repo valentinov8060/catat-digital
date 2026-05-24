@@ -97,7 +97,10 @@ export const generateExcelFinanceAuditBufferService = async (
     const buffer = (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
     return buffer;
   } catch (error) {
-    logger.error("There was an error in the generateExcelBuffer:", error);
+    logger.error(
+      "There was an error in the generateExcelFinanceAuditBuffer:",
+      error,
+    );
     throw error;
   }
 };

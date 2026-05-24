@@ -32,7 +32,7 @@ export const postAuditCatatanService = async (
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     logger.error(
-      "DANGER: GEMINI_API_KEY is not detected in environment variables",
+      "There was an error in the postAuditCatatanService: GEMINI_API_KEY is not set in environment variables.",
     );
     throw new ResponseError(
       500,
@@ -135,6 +135,9 @@ export const postAuditCatatanService = async (
   });
 
   if (!response.text) {
+    logger.error(
+      "There was an error in the postAuditCatatanService: AI response is empty.",
+    );
     throw new ResponseError(
       500,
       "AI response is empty. Failed to audit the financial record.",
@@ -145,7 +148,7 @@ export const postAuditCatatanService = async (
 
   if (!auditResult.is_financial_record) {
     logger.warn(
-      `Audit rejected: File ${financialRecordsFile.originalname} is not a valid financial document.`,
+      "There was an error in the postAuditCatatanService: The uploaded file does not appear to be a valid financial record.",
     );
     throw new ResponseError(
       400,
