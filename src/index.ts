@@ -10,7 +10,7 @@ import { logger } from "./utils/logger.js";
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = (process.env.PORT || 8080) as number;
 
 app.disable("x-powered-by");
 app.set("trust proxy", false);
@@ -57,7 +57,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Use the master router for all routes
 app.use(router);
 
-app.listen(port, () => {
+app.listen(port, "0.0.0.0", () => {
   logger.info(`Server is running on port ${port}`);
   logger.info(`Swagger docs available at http://localhost:${port}/api-docs`);
 });
