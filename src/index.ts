@@ -40,7 +40,7 @@ const swaggerOptions = {
     info: {
       title: "Catat Digital API",
       version: "1.0.0",
-      description: "API Documentation for Catat Digital Backend",
+      description: "API Documentation for Catat Digital",
     },
     servers: [
       {

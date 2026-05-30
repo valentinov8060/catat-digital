@@ -1,7 +1,7 @@
 {
-  "name": "catat-digital-backend",
+  "name": "catat-digital",
   "version": "1.0.0",
-  "description": "Backend for Catat Digital",
+  "description": "Catat Digital",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts"
   },
+  "packageManager": "pnpm@9.15.4",
   "keywords": [],
   "author": "",
   "license": "ISC",

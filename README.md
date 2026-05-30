@@ -1,40 +1,4 @@
-# Catat Digital Backend 🚀
-
-The backend application for **CatatDigital**, built on top of **Node.js, Express, and TypeScript**. It integrates the official **Gemini 2.0 Flash** service to automatically process and audit financial records for MSMEs using images of physical receipts, invoices, or cash books.
-
-## 🛠️ Tech Stack & Architecture
-
-- **Runtime & Language:** Node.js, TypeScript (ES2022)
-- **Framework & Router:** Express
-- **Architectural Pattern:** 3-Tier Architecture (Routes, Controllers, Services)
-- **AI Integration:** Official `@google/genai` SDK (Model: `gemini-2.0-flash`)
-- **API Documentation:** Swagger UI (`swagger-ui-express`, `swagger-jsdoc`)
-- **File Upload:** Multer (Memory Storage)
-- **Developer Tools:** `tsx` for fast hot-reloading in local development environments
-
----
-
-## 📂 Project Structure
-
-```bash
-catat-digital-backend/
-├── src/
-│   ├── controllers/      # Entry/exit gates for handling HTTP requests & responses
-│   │   └── audit-catatan-controller.ts
-│   ├── middleware/       # Supporting middleware (e.g., Multer file upload)
-│   │   └── multer-middleware.ts
-│   ├── routes/           # Centralized API routing
-│   │   ├── index.ts      # Master router
-│   │   └── audit-catatan-route.ts
-│   ├── services/         # Core business logic (Gemini AI integration)
-│   │   └── audit-catatan-service.ts
-│   ├── utils/            # Helper utilities (Structured Logger)
-│   │   └── logger.ts
-│   └── index.ts          # Main entry point of the Express application
-├── tsconfig.json
-├── package.json
-└── README.md
-```
+# Catat Digital 🚀
 
 ---
 
@@ -52,8 +16,8 @@ Before running the application, ensure you have the following installed on your 
 1. Clone the Repository & Navigate to the Directory
 
 ```bash
-git clone [https://github.com/valentinov8060/catat-digital-backend.git](https://github.com/valentinov8060/catat-digital-backend.git)
-cd catat-digital-backend
+git clone [https://github.com/valentinov8060/catat-digital.git](https://github.com/valentinov8060/catat-digital.git)
+cd catat-digital
 ```
 
 2. Install Dependencies
