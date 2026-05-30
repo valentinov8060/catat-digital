@@ -1,106 +1,77 @@
-import Workbook from "exceljs";
+import ExcelJS from "exceljs";
 import { logger } from "../utils/logger.js";
 
-interface Transaction {
-  date: string;
-  description: string;
-  amount: number;
-  type: "income" | "expense";
-}
-
 interface AuditData {
-  is_financial_record: boolean;
-  transactions: Transaction[];
-  audit: {
-    total_calculated: number;
-    detected_discrepancy: number;
-    notes: string;
-  };
+  is_table: boolean;
+  headers: string[];
+  rows: Record<string, any>[];
+  audit_analysis: string;
 }
 
-export const generateExcelFinanceAuditBufferService = async (
+export const generateExcelAuditBufferService = async (
   data: AuditData,
 ): Promise<Buffer> => {
   try {
-    const workbook = new Workbook.Workbook();
-    const worksheet = workbook.addWorksheet("Financial Audit");
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Extracted Table");
 
-    // Make header row
-    const headerRow = worksheet.getRow(1);
-    headerRow.values = ["Tanggal", "Deskripsi", "Jumlah", "Jenis"];
-    for (let i = 1; i <= 4; i++) {
-      const cell = headerRow.getCell(i);
-      cell.font = { bold: true, color: { argb: "ffffff" } };
+    /**
+     * 1. HEADER (DINAMIS)
+     */
+    const headerRow = worksheet.addRow(data.headers);
+
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
       cell.fill = {
         type: "pattern",
         pattern: "solid",
-        fgColor: { argb: "5b3f86" },
+        fgColor: { argb: "5B3F86" },
       };
-    }
-
-    // Input data from AI
-    data.transactions.forEach((tx) => {
-      const row = worksheet.addRow([
-        tx.date,
-        tx.description,
-        tx.amount,
-        tx.type === "income" ? "Pemasukan" : "Pengeluaran",
-      ]);
-
-      // Give different background color for income vs expense
-      const typeCell = row.getCell(4);
-      if (tx.type === "income") {
-        typeCell.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "E2EFDA" },
-        };
-      } else {
-        typeCell.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FCE4D6" },
-        };
-      }
-
-      // Format amount as currency
-      row.getCell(3).numFmt = "#,##0";
+      cell.alignment = { wrapText: true };
     });
 
-    // Total balance
-    const totalBalanceHeaderCell = worksheet.getCell("F3");
-    totalBalanceHeaderCell.value = "Total Saldo";
-    totalBalanceHeaderCell.font = { bold: true, color: { argb: "ffffff" } };
-    totalBalanceHeaderCell.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "5b3f86" },
-    };
+    /**
+     * 2. ROWS (DINAMIS)
+     */
+    data.rows.forEach((rowObj) => {
+      // normalize empty cells and maintain the order of headers
+      const rowValues = data.headers.map((header) => {
+        const val = rowObj[header];
 
-    const totalBalanceCell = worksheet.getCell("F4");
-    totalBalanceCell.value = {
-      formula: 'SUMIF(D:D, "Pemasukan", C:C) - SUMIF(D:D, "Pengeluaran", C:C)',
-    };
-    totalBalanceCell.numFmt = "#,##0";
-    totalBalanceCell.font = { bold: true };
+        // normalize empty
+        if (val === "" || val === undefined) return null;
 
-    // Optimize column widths based on content
-    worksheet.columns.forEach((column) => {
-      let maxLen = 12;
-      column.eachCell?.({ includeEmpty: true }, (cell) => {
-        const valLen = cell.value ? cell.value.toString().length : 0;
-        if (valLen > maxLen) maxLen = valLen;
+        return val;
       });
-      column.width = maxLen + 3;
+
+      const row = worksheet.addRow(rowValues);
+
+      // formatting number cells and wrap text for all cells
+      row.eachCell((cell) => {
+        if (typeof cell.value === "number") {
+          cell.numFmt = "#,##0";
+        }
+
+        cell.alignment = { wrapText: true };
+      });
+    });
+
+    /**
+     * 3. AUTO WIDTH
+     */
+    worksheet.columns.forEach((column) => {
+      let maxLen = 10;
+      column.eachCell?.({ includeEmpty: true }, (cell) => {
+        const val = cell.value ? cell.value.toString().length : 0;
+        if (val > maxLen) maxLen = val;
+      });
+      column.width = maxLen + 2;
     });
 
     const buffer = (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
     return buffer;
   } catch (error) {
-    logger.error(
-      "There was an error in the generateExcelFinanceAuditBuffer:",
-      error,
-    );
+    logger.error("Error in generateExcelAuditBufferService:", error);
     throw error;
   }
 };

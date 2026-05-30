@@ -1,29 +1,19 @@
 import { GoogleGenAI } from "@google/genai";
 import { ResponseError } from "../error/response-error.js";
 import { logger } from "../utils/logger.js";
-import { generateExcelFinanceAuditBufferService } from "../services/excel-export-service.js";
+import { generateExcelAuditBufferService } from "../services/excel-export-service.js";
 
 // Data dummy for testing without calling the AI API. This should be removed or replaced with proper mocks in unit tests.
-import auditDummyDataJson from "../../finance-report-dummy.json" with { type: "json" };
-
-interface Transaction {
-  date: string;
-  description: string;
-  amount: number;
-  type: "income" | "expense";
-}
+import tableDataDummy from "../../table-data-dummy.json" with { type: "json" };
 
 interface AuditData {
-  is_financial_record: boolean;
-  transactions: Transaction[];
-  audit: {
-    total_calculated: number;
-    detected_discrepancy: number;
-    notes: string;
-  };
+  is_table: boolean;
+  headers: string[];
+  rows: any[];
+  audit_analysis: string;
 }
 
-const auditDummyData = auditDummyDataJson.data as AuditData;
+const dataDummy = tableDataDummy as AuditData;
 
 export const postAuditCatatanService = async (
   financialRecordsFile: Express.Multer.File,
@@ -47,73 +37,22 @@ export const postAuditCatatanService = async (
   const imageBase64 = financialRecordsFile.buffer.toString("base64");
   const mimeType = financialRecordsFile.mimetype;
 
-  const systemInstruction = `You are an expert financial auditor for MSMEs.
-      Your task is to audit financial documents (such as receipts, invoices, or cash books) from the provided image.
+  const systemInstruction = `
+    You are an expert data extraction engine and financial auditor.
+    
+    CORE TASKS:
+    1. Detect if a table exists in the image. If no table is found, return {"is_table": false, "headers": [], "rows": [], "audit_analysis": null}.
+    2. Dynamically extract the table headers exactly as they appear.
+    3. Map each row into an object. You MUST use the extracted headers as the keys for every object in the 'rows' array.
+      Example: If headers are ["Date", "Amount"], a row MUST be {"Date": "2026-05-30", "Amount": "5000"}.
+    4. DO NOT return empty objects {} in the 'rows' array. Fill them with the actual data from the image cells. If a cell is empty, use null.
 
-      CRITICAL RULES:
-      1. Validate if the uploaded image is actually a financial record or receipt. Set "is_financial_record" to true or false accordingly.
-      2. Carefully cross-check and recalculate all numbers, prices, and totals shown in the document.
-      3. Identify any calculation discrepancies, mismatched numbers, or recording errors, and explain them in detail within the "audit.notes" field.
-    `;
-
-  const jsonSchema = {
-    type: "OBJECT",
-    properties: {
-      is_financial_record: {
-        type: "BOOLEAN",
-        description:
-          "True if the image is a receipt, invoice, ledger, or any financial record. False otherwise.",
-      },
-      transactions: {
-        type: "ARRAY",
-        description:
-          "List of extracted transaction items if is_financial_record is true. Empty array if false.",
-        items: {
-          type: "OBJECT",
-          properties: {
-            date: {
-              type: "STRING",
-              description:
-                "Format: YYYY-MM-DD. Fallback to current year if only month/date is visible.",
-            },
-            description: {
-              type: "STRING",
-              description: "Item name, service description, or purpose.",
-            },
-            amount: {
-              type: "NUMBER",
-              description: "The unit price or line total amount.",
-            },
-            type: { type: "STRING", enum: ["income", "expense"] },
-          },
-          required: ["date", "description", "amount", "type"],
-        },
-      },
-      audit: {
-        type: "OBJECT",
-        description: "Audit summary and calculation verification.",
-        properties: {
-          total_calculated: {
-            type: "NUMBER",
-            description:
-              "The sum of all items calculated manually by you (the AI).",
-          },
-          detected_discrepancy: {
-            type: "NUMBER",
-            description:
-              "The difference between the written total on the receipt and your manual calculation. 0 if perfectly balanced.",
-          },
-          notes: {
-            type: "STRING",
-            description:
-              "Detailed explanation about calculation errors, missing data, or confirmation that the math is correct.",
-          },
-        },
-        required: ["total_calculated", "detected_discrepancy", "notes"],
-      },
-    },
-    required: ["is_financial_record", "transactions", "audit"],
-  };
+    FINANCIAL AUDIT LOGIC:
+    - Carefully review all numeric columns (e.g., Debit, Credit, Balance, Total, Amount).
+    - Perform mathematical recalculations where applicable (e.g., Previous Balance + Income/Debit - Expense/Credit = Expected Balance).
+    - Cross-check row-by-row data to detect discrepancies, calculation errors, typos, or missing entries.
+    - Provide a detailed summary of your findings in the 'audit_analysis' field. If the data is mathematically sound and consistent, state "Data is consistent and verified".
+  `;
 
   // Start audit process with the AI model
   const response = await ai.models.generateContent({
@@ -125,12 +64,23 @@ export const postAuditCatatanService = async (
           mimeType: mimeType,
         },
       },
-      "Please analyze this image, verify if it is a financial document, and audit the transactions.",
+      {
+        text: `
+          Analyze this image, extract the table, and perform a financial audit. 
+          You MUST strictly return your response in this JSON format:
+          {
+            "is_table": boolean,
+            "headers": string[],
+            "rows": object[],
+            "audit_analysis": string
+          }
+          Ensure all rows are fully populated with keys matching the headers. Do not omit any data.
+        `,
+      },
     ],
     config: {
       systemInstruction: systemInstruction,
       responseMimeType: "application/json",
-      responseSchema: jsonSchema,
     },
   });
 
@@ -145,19 +95,21 @@ export const postAuditCatatanService = async (
   }
 
   const auditResult = JSON.parse(response.text.trim());
+  console.log(response.text.trim());
 
-  if (!auditResult.is_financial_record) {
+  if (!auditResult.is_table) {
     logger.warn(
-      "There was an error in the postAuditCatatanService: The uploaded file does not appear to be a valid financial record.",
+      "There was an error in the postAuditCatatanService: The uploaded file does not appear to be a valid data table.",
     );
     throw new ResponseError(
       400,
-      "The uploaded file does not appear to be a valid financial record. Please upload a clear image of a receipt, invoice, or ledger.",
+      "The uploaded file does not appear to be a valid data table. Please upload a clear image of a receipt, invoice, or ledger.",
     );
   }
 
-  // const parsedData = JSON.parse(JSON.stringify(auditDummyData));
-  const excelBuffer = await generateExcelFinanceAuditBufferService(auditResult);
+  // const parsedData = JSON.parse(JSON.stringify(dataDummy)) as AuditData;
+  // const excelBuffer = await generateExcelAuditBufferService(parsedData);
+  const excelBuffer = await generateExcelAuditBufferService(auditResult);
 
   return { excelBuffer };
 };

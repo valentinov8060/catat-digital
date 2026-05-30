@@ -1,0 +1,60 @@
+{
+  "is_table": true,
+  "headers": [
+    "No",
+    "Kode Barang",
+    "Keterangan",
+    "Qty",
+    "Harga",
+    "Disc",
+    "Jumlah"
+  ],
+  "rows": [
+    {
+      "No": "1",
+      "Kode Barang": "BR-019823",
+      "Keterangan": "HVS F4 80gr SIDU",
+      "Qty": "10 rim",
+      "Harga": "28,000",
+      "Disc": null,
+      "Jumlah": "280,000"
+    },
+    {
+      "No": "2",
+      "Kode Barang": "BR-019421",
+      "Keterangan": "HVS A4 70gr SIDU",
+      "Qty": "10 rim",
+      "Harga": "25,000",
+      "Disc": null,
+      "Jumlah": "250,000"
+    },
+    {
+      "No": "3",
+      "Kode Barang": "BR-123483",
+      "Keterangan": "Snowman Board Marker",
+      "Qty": "50 pcs",
+      "Harga": "5,000",
+      "Disc": null,
+      "Jumlah": "250,000"
+    },
+    {
+      "No": "4",
+      "Kode Barang": "BR-123843",
+      "Keterangan": "Pensil 2B Faber Castel",
+      "Qty": "50 pcs",
+      "Harga": "1,800",
+      "Disc": null,
+      "Jumlah": "90,000"
+    },
+    {
+      "No": "5",
+      "Kode Barang": "BR-442198",
+      "Keterangan": "GT Pro DVD R",
+      "Qty": "200 pcs",
+      "Harga": "3,500",
+      "Disc": null,
+      "Jumlah": "700,000"
+    }
+  ],
+  "audit_analysis": "Mathematical Audit Findings: 1. Row-level calculations (Qty * Harga = Jumlah): 10 * 28,000 = 280,000 (Correct); 10 * 25,000 = 250,000 (Correct); 50 * 5,000 = 250,000 (Correct); 50 * 1,800 = 90,000 (Correct); 200 * 3,500 = 700,000 (Correct). 2. Sub Total calculation: 280,000 + 250,000 + 250,000 + 90,000 + 700,000 = 1,570,000 (Correct). 3. PPN 10% calculation: 10% of 1,570,000 = 157,000 (Correct). 4. Total calculation check: There is a calculation error in the final Total. The document states 'Total 1,413,000'. However, Sub Total (1,570,000) + PPN (157,000) should equal 1,727,000. It appears the PPN was subtracted instead of added (1,570,000 - 157,000 = 1,413,000). Summary: The Total value is mathematically incorrect based on standard accounting principles (Total = Subtotal + Tax)."
+}
