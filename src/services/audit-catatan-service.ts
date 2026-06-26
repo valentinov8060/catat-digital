@@ -3,18 +3,6 @@ import { ResponseError } from "../error/response-error.js";
 import { logger } from "../utils/logger.js";
 import { generateExcelAuditBufferService } from "../services/excel-export-service.js";
 
-// Data dummy for testing without calling the AI API. This should be removed or replaced with proper mocks in unit tests.
-import tableDataDummy from "../../table-data-dummy.json" with { type: "json" };
-
-interface AuditData {
-  is_table: boolean;
-  headers: string[];
-  rows: any[];
-  audit_analysis: string;
-}
-
-const dataDummy = tableDataDummy as AuditData;
-
 export const postAuditCatatanService = async (
   financialRecordsFile: Express.Multer.File,
 ): Promise<{ excelBuffer: Buffer }> => {
@@ -107,8 +95,6 @@ export const postAuditCatatanService = async (
     );
   }
 
-  // const parsedData = JSON.parse(JSON.stringify(dataDummy)) as AuditData;
-  // const excelBuffer = await generateExcelAuditBufferService(parsedData);
   const excelBuffer = await generateExcelAuditBufferService(auditResult);
 
   return { excelBuffer };

@@ -16,7 +16,7 @@ Before running the application, ensure you have the following installed on your 
 1. Clone the Repository & Navigate to the Directory
 
 ```bash
-git clone [https://github.com/valentinov8060/catat-digital.git](https://github.com/valentinov8060/catat-digital.git)
+git clone https://github.com/valentinov8060/catat-digital.git
 cd catat-digital
 ```
 
